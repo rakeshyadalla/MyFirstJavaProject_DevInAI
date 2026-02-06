@@ -4,6 +4,7 @@ import com.ashu.practice.common.Constants;
 import com.ashu.practice.common.model.Order;
 import com.ashu.practice.common.model.OrderKey;
 import com.ashu.practice.integration.client.OrderServiceClient;
+import com.ashu.practice.integration.config.IntegrationTestProperties;
 import com.ashu.practice.integration.config.KafkaTestContainersConfig;
 import com.ashu.practice.integration.config.TestKafkaConsumerConfig;
 import com.ashu.practice.integration.config.TestKafkaProducerConfig;
@@ -38,23 +39,35 @@ public abstract class BaseIntegrationTest {
     protected static KafkaProducer<OrderKey, Order> producer;
     protected static OrderServiceClient orderServiceClient;
 
-    protected static final String ORDER_SERVICE_BASE_URL = "http://localhost:8080";
-    protected static final int PAYMENT_SERVICE_PORT = 8081;
-    protected static final int STOCK_SERVICE_PORT = 8082;
+    protected static String orderServiceBaseUrl;
+    protected static int paymentServicePort;
+    protected static int stockServicePort;
 
     @BeforeAll
     static void setUpInfrastructure() {
-        log.info("Starting Kafka infrastructure...");
-        KafkaTestContainersConfig.startContainers();
-        kafkaBootstrapServers = KafkaTestContainersConfig.getKafkaBootstrapServers();
-        schemaRegistryUrl = KafkaTestContainersConfig.getSchemaRegistryUrl();
+        orderServiceBaseUrl = IntegrationTestProperties.getOrderServiceUrl();
+        paymentServicePort = IntegrationTestProperties.getPaymentServicePort();
+        stockServicePort = IntegrationTestProperties.getStockServicePort();
+
+        if (IntegrationTestProperties.useTestcontainers()) {
+            log.info("Starting Kafka infrastructure using Testcontainers...");
+            KafkaTestContainersConfig.startContainers();
+            kafkaBootstrapServers = KafkaTestContainersConfig.getKafkaBootstrapServers();
+            schemaRegistryUrl = KafkaTestContainersConfig.getSchemaRegistryUrl();
+        } else {
+            log.info("Using external Kafka infrastructure from properties...");
+            kafkaBootstrapServers = IntegrationTestProperties.getKafkaBootstrapServers();
+            schemaRegistryUrl = IntegrationTestProperties.getSchemaRegistryUrl();
+        }
+
         log.info("Kafka bootstrap servers: {}", kafkaBootstrapServers);
         log.info("Schema registry URL: {}", schemaRegistryUrl);
+        log.info("Order service URL: {}", orderServiceBaseUrl);
 
         createTopics();
 
         producer = TestKafkaProducerConfig.createProducer(kafkaBootstrapServers, schemaRegistryUrl);
-        orderServiceClient = new OrderServiceClient(ORDER_SERVICE_BASE_URL);
+        orderServiceClient = new OrderServiceClient(orderServiceBaseUrl);
     }
 
     @AfterAll

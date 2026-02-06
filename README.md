@@ -158,7 +158,7 @@ src/
 ## Technical Stack
 
 - **Spring Boot 3.2.0**
-- **Java 21**
+- **Java 17**
 - **Apache Kafka with Avro serialization**
 - **Confluent Schema Registry**
 - **Testcontainers 1.19.3**
@@ -169,10 +169,61 @@ src/
 
 ## Configuration
 
-The tests are configured to connect to:
-- Kafka bootstrap servers: Dynamically provided by Testcontainers
-- Schema Registry: Dynamically provided by Testcontainers
-- Order Service REST API: `http://localhost:8080`
+All environment-specific settings are externalized to properties files. You can configure the tests without modifying Java code.
+
+### Configuration Files
+
+1. **`src/test/resources/integration-test.properties`** - Main configuration file
+2. **`src/test/resources/application-test.yml`** - YAML format configuration
+
+### Using Testcontainers (Default)
+
+By default, tests use Testcontainers to automatically provision Kafka infrastructure:
+
+```properties
+integration.use-testcontainers=true
+```
+
+### Using External Kafka Services
+
+To run tests against your actual distributed-transactions-kafka services:
+
+1. Edit `src/test/resources/integration-test.properties`:
+```properties
+# Disable Testcontainers
+integration.use-testcontainers=false
+
+# Your Kafka configuration
+integration.kafka.bootstrap-servers=localhost:9092
+integration.kafka.schema-registry-url=http://localhost:8081
+
+# Service URLs
+integration.services.order-service-url=http://localhost:8080
+integration.services.payment-service-port=8081
+integration.services.stock-service-port=8082
+```
+
+2. Start your distributed-transactions-kafka services
+3. Run the tests: `./gradlew test`
+
+### Environment Variable Overrides
+
+You can also override any property using environment variables:
+
+```bash
+INTEGRATION_USE_TESTCONTAINERS=false \
+INTEGRATION_KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+INTEGRATION_KAFKA_SCHEMA_REGISTRY_URL=http://localhost:8081 \
+INTEGRATION_SERVICES_ORDER_SERVICE_URL=http://localhost:8080 \
+./gradlew test
+```
+
+### Configuration Priority
+
+1. Environment variables (highest priority)
+2. System properties (`-D` flags)
+3. `integration-test.properties` file
+4. Default values (lowest priority)
 
 ## Notes
 
@@ -187,7 +238,7 @@ The tests are configured to connect to:
 Ensure Docker is running and you have sufficient resources allocated.
 
 ### Port Conflicts
-If port 8080 is in use, update the `ORDER_SERVICE_BASE_URL` in `BaseIntegrationTest.java`.
+If port 8080 is in use, update `integration.services.order-service-url` in `integration-test.properties`.
 
 ### Timeout Issues
 Increase timeout values in test methods if running on slower machines.

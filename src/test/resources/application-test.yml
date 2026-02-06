@@ -4,6 +4,18 @@ spring:
   main:
     banner-mode: off
 
+# Integration Test Configuration
+# Set use-testcontainers=false to use external Kafka services
+integration:
+  use-testcontainers: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    schema-registry-url: http://localhost:8081
+  services:
+    order-service-url: http://localhost:8080
+    payment-service-port: 8081
+    stock-service-port: 8082
+
 logging:
   level:
     root: warn
